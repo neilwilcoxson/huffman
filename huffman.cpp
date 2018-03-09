@@ -4,6 +4,10 @@
  * Due Date: 3/21/2018
  * Date Created: 3/1/2018
  * Date Last Modified: 3/8/2018
+ *
+ * This program uses huffman encoding to compress and decompress files
+ * (primarily text).  File are given as command line arguments. See help
+ * message for success/error codes.
  */
 
 #include <iostream>
@@ -13,8 +17,6 @@
 #include <queue>
 
 using namespace std;
-
-//TODO what if the file is too large
 
 struct TreeNode{
     bool isChar, rightChild;
@@ -131,10 +133,11 @@ public:
     friend istream& operator>>(istream &is, HuffmanTree& ht);
 };
 
+//used to exit smoothly anytime the program can't continue
 class unsuccessful : public exception{
 public:
-    string msg;
-    int code;
+    string msg;  //error message: can be printed in catch block
+    int code;    //error code: can be returned in catch block
 
     unsuccessful(string s, int i){
         msg = move(s);
@@ -148,7 +151,7 @@ int main(int argc, char** argv){
         if(argc >= 2 && strcmp(argv[1], "--help") == 0){
             cerr << "To compress use -huff\n"
                  << "To decompress use -unhuff\n\n"
-                 << "Error Codes:\n"
+                 << "Success/Error Codes:\n"
                  << "0 - operation completed successfully\n"
                  << "1 - incorrect number of, unrecognized arguments\n"
                  << "2 - file read/write error\n"
