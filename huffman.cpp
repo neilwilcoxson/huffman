@@ -132,10 +132,16 @@ public:
 };
 
 int main(int argc, char** argv){
+    //incorrect number of arguements
     if(argc < 4){
         if(argc >= 2 && strcmp(argv[1], "--help") == 0){
             cerr << "To compress use -huff\n"
-                 << "To decompress use -unhuff\n\n";
+                 << "To decompress use -unhuff\n\n"
+                 << "Error Codes:\n"
+                 << "0 - operation completed successfully\n"
+                 << "1 - incorrect number of, unrecognized arguements\n"
+                 << "2 - file read/write error\n"
+                 << "3 - unable to compress/decompress\n\n";
         }
         cerr << "Usage: huffman -huff <source> <destination>\n"
              << "Usage: huffman -unhuff <source> <destination>\n\n"
@@ -164,6 +170,7 @@ int main(int argc, char** argv){
 
     HuffmanTree h;
 
+    //compress
     if(strcmp(argv[1],"-huff") == 0){
         if(h.buildTree(src)){
             dest << h;
@@ -175,7 +182,10 @@ int main(int argc, char** argv){
             dest.close();
             exit(3);
         }
-    }else if(strcmp(argv[1],"-unhuff") == 0){
+    }
+
+    //decompress
+    else if(strcmp(argv[1],"-unhuff") == 0){
         int key;
         src.read((char*)&key, sizeof(int));
 
@@ -186,13 +196,16 @@ int main(int argc, char** argv){
             cerr << "File was not compressed by this program" << endl;
             src.close();
             dest.close();
-            exit(4);
+            exit(3);
         }
-    }else{
+    }
+
+    //unrecognized
+    else{
         cerr << "Unrecognized command line option" << endl;
         src.close();
         dest.close();
-        exit(5);
+        exit(1);
     }
 
     src.close();
@@ -261,6 +274,7 @@ bool HuffmanTree::buildTree(ifstream& f){
             //data: number of bytes varies
             TreeNode* currentNode = array[i];
 
+            //determine how many steps to the root --> how many bytes
             while(currentNode != this->root){
                 bits++;
 
@@ -287,9 +301,6 @@ bool HuffmanTree::buildTree(ifstream& f){
 
     this->root = queueToTree(q);
 
-    f.clear();
-    f.seekg(ios::beg);
-
     return bytesRequired < charCount;
 }
 
@@ -298,12 +309,16 @@ void HuffmanTree::encode(ifstream& in, ofstream& out){
     int currentPattern = 0, pBits = 0, bBits = 0, extra = 1;
     TreeNode* currentNode;
 
+    //start at beginning of input file
     in.clear();
     in.seekg(ios::beg);
 
+    //keep reading until we can't, then once more for EOF
     while(in.read(&c,1) || extra--){
+        //use c, except for last iteration, use EOF (255)
         currentNode = array[extra ? c : 255];
 
+        //determine pattern to root
         while(currentNode != this->root){
             currentPattern <<= 1;
             currentPattern |= currentNode->rightChild ? 1 : 0;
@@ -313,13 +328,18 @@ void HuffmanTree::encode(ifstream& in, ofstream& out){
         }
 
         while(pBits > 0){
+            //make one space on the right
             buffer <<= 1;
+
+            //set the right bit if it is set in currentPattern
             buffer |= currentPattern & 1;
+
+            //adjust for next iteration
             currentPattern >>= 1;
             pBits--;
-
             bBits++;
 
+            //once there is a full byte, write to file
             if(bBits == 8){
                 out.write(&buffer,1);
                 buffer = 0;
@@ -342,10 +362,12 @@ void HuffmanTree::decode(ifstream& in, ofstream& out){
     in.clear();
     while(in.read(&buffer,1)){
         for(int i = 7; i >= 0; i--){
+            //determine if the bit is set and follow directions
             int temp = (buffer >> i) & 1;
             current = temp ? current->right : current->left;
 
             if(current->isChar){
+                //Is it the EOF character?
                 if(current->letter == -1){
                     return;
                 }else{
@@ -360,6 +382,7 @@ void HuffmanTree::decode(ifstream& in, ofstream& out){
 ostream& operator<<(ostream &os, const HuffmanTree& ht){
     os.write((char*)&ht.id, sizeof(int));
     os.write((char*)&ht.numChar, sizeof(int));
+
     for(int i = 256-ht.numChar; i < 256; i++){
         if(ht.refArray[i] && ht.refArray[i]->frequency > 0){
             os.write(&ht.refArray[i]->letter,1);
@@ -375,20 +398,21 @@ istream& operator>>(istream &is, HuffmanTree& ht){
 
     is.read((char*)&ht.numChar, sizeof(int));
 
-    if(!ht.array){
-        ht.array = new TreeNode*[ht.numChar];
+    if(!ht.refArray){
+        ht.refArray = new TreeNode*[ht.numChar];
     }
 
     queue<TreeNode*> q;
 
+    //read characters and frequencies and add to queue
     for(int i = 0; i < ht.numChar; i++){
         is.read(&c,1);
         is.read((char*)&f, sizeof(int));
 
-        ht.array[i] = new TreeNode(true, c);
-        ht.array[i]->frequency = f;
+        ht.refArray[i] = new TreeNode(true, c);
+        ht.refArray[i]->frequency = f;
 
-        q.push(ht.array[i]);
+        q.push(ht.refArray[i]);
     }
 
     ht.root = queueToTree(q);
@@ -401,20 +425,25 @@ TreeNode* queueToTree(queue<TreeNode*>& q){
 
     while(!q.empty()){
         TreeNode* temp = new TreeNode(false);
+
+        //put the least frequent item on the left
         temp->left = q.front();
         temp->left->parent = temp;
         temp->frequency = temp->left->frequency;
         q.pop();
 
         if(!q.empty()){
+            //put the next least frequent on the right
             temp->right = q.front();
             temp->right->parent = temp;
             temp->frequency += temp->right->frequency;
             temp->right->rightChild = true;
             q.pop();
 
+            //add to the back of the queue and repeat
             q.push(temp);
         }else{
+            //nothing left on queue, cleanup
             root = temp->left;
             root->parent = root;
             temp->left = nullptr;
