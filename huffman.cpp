@@ -286,21 +286,6 @@ bool HuffmanTree::buildTree(ifstream& f){
             //header: 1 byte for character
             bytesRequired++;
 
-            //data: number of bytes varies
-            TreeNode* currentNode = array[i];
-
-            //determine how many steps to the root --> how many bytes
-            while(currentNode != this->root){
-                bits++;
-
-                if(bits >= 8){
-                    bytesRequired++;
-                    bits = 0;
-                }
-
-                currentNode = currentNode->parent;
-            }
-
             //number of unique characters in tree
             numChar++;
         }else{
@@ -309,12 +294,29 @@ bool HuffmanTree::buildTree(ifstream& f){
         }
     }
 
+    this->root = queueToTree(q);
+
+    //determine how many steps to the root --> how many bytes
+    for(int i = 256-this->numChar; i < 256; i++){
+        //data: number of bytes varies
+        TreeNode* currentNode = refArray[i];
+
+        while(currentNode != this->root){
+            bits += refArray[i]->frequency;
+
+            while(bits >= 8){
+                bytesRequired++;
+                bits -= 8;
+            }
+
+            currentNode = currentNode->parent;
+        }
+    }
+
     //if there are still bits remaining, we need an extra byte
     if(bits){
         bytesRequired++;
     }
-
-    this->root = queueToTree(q);
 
     return bytesRequired < charCount;
 }
