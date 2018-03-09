@@ -137,8 +137,7 @@ public:
     int code;
 
     unsuccessful(string s, int i){
-        exception();
-        msg = s;
+        msg = move(s);
         code = i;
     }
 };
@@ -211,7 +210,7 @@ int main(int argc, char** argv){
             throw unsuccessful("Unrecognized command line option", 1);
         }
 
-    }catch(unsuccessful e){
+    }catch(unsuccessful& e){
         cerr << e.msg << endl;
         src.close();
         dest.close();
@@ -253,7 +252,7 @@ bool HuffmanTree::buildTree(ifstream& f){
     }
 
     for(int i = 0; i < 256; i++){
-        array[i] = new TreeNode(true, i);
+        array[i] = new TreeNode(true, (char)i);
         refArray[i] = array[i];
     }
 
@@ -431,10 +430,10 @@ istream& operator>>(istream &is, HuffmanTree& ht){
 }
 
 TreeNode* queueToTree(queue<TreeNode*>& q){
-    TreeNode* root = nullptr;
+    TreeNode *root = nullptr, *temp;
 
     while(!q.empty()){
-        TreeNode* temp = new TreeNode(false);
+        temp = new TreeNode(false);
 
         //put the least frequent item on the left
         temp->left = q.front();
