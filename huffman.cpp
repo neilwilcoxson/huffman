@@ -3,7 +3,7 @@
  * Assignment Title: Project 4 - Huffman Encoding
  * Due Date: 3/21/2018
  * Date Created: 3/1/2018
- * Date Last Modified: 3/1/2018
+ * Date Last Modified: 3/8/2018
  */
 
 #include <iostream>
@@ -14,16 +14,7 @@
 
 using namespace std;
 
-
-//TODO function header comments
-/*
- * name
- *
- * description:
- * return:
- * precondition:
- * postcondition:
- */
+//TODO what if the file is too large
 
 struct TreeNode{
     bool isChar, rightChild;
@@ -38,34 +29,105 @@ struct TreeNode{
         this->left = this->right = this->parent = nullptr;
         this->rightChild = false;
     }
+
+    //WARNING: Destructor deletes all children nodes
     ~TreeNode(){
         delete left;
         delete right;
     }
-
-    bool operator<(TreeNode& that){
-        return this->frequency < that.frequency;
-    }
 };
 
+/*
+ * TreeNodePtrCompare
+ *
+ * description: compares TreeNode* based on frequency for sorting
+ * return: bool
+ * precondition: pointers have been assigned
+ * postcondition: true/false (a < b) returned
+ */
 bool TreeNodePtrCompare(TreeNode* a, TreeNode* b){
     return a->frequency < b->frequency;
 }
+
+/*
+ * queueToTree
+ *
+ * description: builds a HuffmanTree based on leaf nodes (letters) in queue
+ * return: TreeNode*
+ * precondition: all letters are queued with lowest frequency at front
+ * postcondition: root node of new tree is returned
+ */
 TreeNode* queueToTree(queue<TreeNode*>& q);
 
 class HuffmanTree{
 protected:
-    TreeNode *root, **array, **refArray;
-    int numChar;
-    int id;
+    TreeNode *root,         //root node of the tree
+            **array,        //sorted by numerical value (0-255)
+            **refArray;     //sorted by frequency
+    int numChar,            //number of unique characters
+        id;                 //used for verification
 public:
     HuffmanTree();
     ~HuffmanTree();
+
+    /*
+     * HuffmanTree::verify
+     *
+     * description: verifies tree read from file was created by this program
+     * return: bool
+     * precondition: id read from file and stored in int
+     * postcondition: flag representing whether tree is compatible
+     */
     bool verify(int id);
+
+    /*
+     * HuffmanTree::buildTree
+     *
+     * description: builds a tree in memory from an uncompressed file
+     * return: bool
+     * precondition: file is open
+     * postcondition: flag representing whether compresses will work
+     */
     bool buildTree(ifstream& f);
+
+    /*
+     * HuffmanTree::encode
+     *
+     * description: compresses contents of input file to output file
+     * return: void
+     * precondition: input/output files are open, tree written to output file
+     * postcondition: compressed data written to output file
+     */
     void encode(ifstream& in, ofstream& out);
+
+    /*
+     * HuffmanTree::decode
+     *
+     * description: decompresses contents on input file to output file
+     * return: void
+     * precondition: both files are open, input file marker at data start
+     * postcondition: decompressed data written to output file
+     */
     void decode(ifstream& in, ofstream& out);
+
+    /*
+     * operator<<
+     *
+     * description: outputs tree data, including id
+     * return: ostream&
+     * precondition: tree has been built
+     * postcondition: tree data written to output stream
+     */
     friend ostream& operator<<(ostream &os, const HuffmanTree& ht);
+
+    /*
+     * operator>>
+     *
+     * description: reads in tree data from input stream
+     * return: istream&
+     * precondition: id has been verified, marker at tree data
+     * postcondition: tree is reassembled
+     */
     friend istream& operator>>(istream &is, HuffmanTree& ht);
 };
 
@@ -139,6 +201,8 @@ int main(int argc, char** argv){
     return 0;
 }
 
+/*** Definitions ***/
+
 HuffmanTree::HuffmanTree(){
     this->root = nullptr;
     this->numChar = 0;
@@ -148,13 +212,15 @@ HuffmanTree::HuffmanTree(){
 HuffmanTree::~HuffmanTree(){
     delete root;
     delete [] array;
+    delete [] refArray;
 }
 bool HuffmanTree::verify(int id){
     return id == this->id;
 }
 bool HuffmanTree::buildTree(ifstream& f){
     unsigned long charCount = 0, bytesRequired = 8;
-    char current;
+    int bits = 0;
+    char c;
 
     if(!array){
         array = new TreeNode*[256];
@@ -168,59 +234,61 @@ bool HuffmanTree::buildTree(ifstream& f){
         refArray[i] = array[i];
     }
 
-    f.seekg(ios::beg);
-
+    //255 (-1 signed) is used as the EOF character
     array[255]->frequency = 1;
 
-    while(f.read(&current,1)){
-        array[current]->frequency++;
+    f.seekg(ios::beg);
+
+    //count frequency of each character, and how many characters total in file
+    while(f.read(&c,1)){
+        array[c]->frequency++;
         charCount++;
     }
 
+    //sort reference array based on frequency
     sort(refArray,refArray+256,TreeNodePtrCompare);
 
     queue<TreeNode*> q;
 
     for(int i = 0; i < 256; i++){
         if(refArray[i]->frequency > 0){
+            //only push characters that actually appear
             q.push(refArray[i]);
+
+            //header: 1 byte for character + 4 bytes for frequency
             bytesRequired += 5;
+
+            //data: number of bytes varies
+            TreeNode* currentNode = array[i];
+
+            while(currentNode != this->root){
+                bits++;
+
+                if(bits >= 8){
+                    bytesRequired++;
+                    bits = 0;
+                }
+
+                currentNode = currentNode->parent;
+            }
+
+            //number of unique characters in tree
             numChar++;
         }else{
+            //not used in the tree
             delete refArray[i];
         }
     }
 
-    this->root = queueToTree(q);
-
-    delete [] refArray;
-
-    f.clear();
-    f.seekg(ios::beg);
-
-    //TODO use frequency instead of reading file again
-    int bits = 0;
-
-    while(f.read(&current,1)){
-        TreeNode* currentNode = array[current];
-
-        while(currentNode != this->root){
-            bits++;
-
-            if(bits >= 8){
-                bytesRequired++;
-                bits = 0;
-            }
-
-            currentNode = currentNode->parent;
-        }
-        if(bytesRequired >= charCount){
-            return false;
-        }
-    }
+    //if there are still bits remaining, we need an extra byte
     if(bits){
         bytesRequired++;
     }
+
+    this->root = queueToTree(q);
+
+    f.clear();
+    f.seekg(ios::beg);
 
     return bytesRequired < charCount;
 }
@@ -260,6 +328,7 @@ void HuffmanTree::encode(ifstream& in, ofstream& out){
         }
     }
 
+    //write one more byte padded with zeroes if necessary
     if(bBits){
         buffer <<= 8 - bBits;
         out.write(&buffer,1);
@@ -299,6 +368,7 @@ ostream& operator<<(ostream &os, const HuffmanTree& ht){
     }
     return os;
 }
+
 istream& operator>>(istream &is, HuffmanTree& ht){
     char c;
     int f;
