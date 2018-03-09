@@ -131,6 +131,18 @@ public:
     friend istream& operator>>(istream &is, HuffmanTree& ht);
 };
 
+class unsuccessful : public exception{
+public:
+    string msg;
+    int code;
+
+    unsuccessful(string s, int i){
+        exception();
+        msg = s;
+        code = i;
+    }
+};
+
 int main(int argc, char** argv){
     //incorrect number of arguments
     if(argc < 4){
@@ -152,60 +164,58 @@ int main(int argc, char** argv){
     ifstream src;
     ofstream dest;
 
-    src.open(argv[2]);
+    try{
+        src.open(argv[2]);
 
-    if(!src.good()){
-        cerr << "File error: Could not open source file: " << argv[2] << endl;
-        return 2;
-    }
-
-    dest.open(argv[3]);
-
-    if(!dest.good()){
-        cerr << "File error: Could not write to destination file: "
-             << argv[3] << endl;
-        src.close();
-        return 2;
-    }
-
-    HuffmanTree h;
-
-    //compress
-    if(strcmp(argv[1],"-huff") == 0){
-        if(h.buildTree(src)){
-            dest << h;
-            h.encode(src, dest);
-
-        }else{
-            cerr << "File cannot be compressed" << endl;
-            src.close();
-            dest.close();
-            return 3;
+        if(!src.good()){
+            string error = "File error: Could not open source file: ";
+            error += argv[2];
+            throw unsuccessful(error,2);
         }
-    }
 
-    //decompress
-    else if(strcmp(argv[1],"-unhuff") == 0){
-        int key;
-        src.read((char*)&key, sizeof(int));
+        dest.open(argv[3]);
 
-        if(h.verify(key)){
-            src >> h;
-            h.decode(src, dest);
-        }else{
-            cerr << "File was not compressed by this program" << endl;
-            src.close();
-            dest.close();
-            return 3;
+        if(!dest.good()){
+            string error = "File error: Could not write to destination file: ";
+            error += argv[3];
+            throw unsuccessful(error,2);
         }
-    }
 
-    //unrecognized
-    else{
-        cerr << "Unrecognized command line option" << endl;
+        HuffmanTree h;
+
+        //compress
+        if(strcmp(argv[1], "-huff") == 0){
+            if(h.buildTree(src)){
+                dest << h;
+                h.encode(src, dest);
+
+            }else{
+                throw unsuccessful("File cannot be compressed", 3);
+            }
+        }
+
+        //decompress
+        else if(strcmp(argv[1], "-unhuff") == 0){
+            int key;
+            src.read((char *)&key, sizeof(int));
+
+            if(h.verify(key)){
+                src >> h;
+                h.decode(src, dest);
+            }else{
+                throw unsuccessful("File was not compressed by this program", 3);
+            }
+        }
+        //unrecognized
+        else{
+            throw unsuccessful("Unrecognized command line option", 1);
+        }
+
+    }catch(unsuccessful e){
+        cerr << e.msg << endl;
         src.close();
         dest.close();
-        return 1;
+        return e.code;
     }
 
     src.close();
