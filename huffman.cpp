@@ -132,21 +132,21 @@ public:
 };
 
 int main(int argc, char** argv){
-    //incorrect number of arguements
+    //incorrect number of arguments
     if(argc < 4){
         if(argc >= 2 && strcmp(argv[1], "--help") == 0){
             cerr << "To compress use -huff\n"
                  << "To decompress use -unhuff\n\n"
                  << "Error Codes:\n"
                  << "0 - operation completed successfully\n"
-                 << "1 - incorrect number of, unrecognized arguements\n"
+                 << "1 - incorrect number of, unrecognized arguments\n"
                  << "2 - file read/write error\n"
                  << "3 - unable to compress/decompress\n\n";
         }
         cerr << "Usage: huffman -huff <source> <destination>\n"
              << "Usage: huffman -unhuff <source> <destination>\n\n"
              << "NOTE: If destination exists, it will be overwritten!" << endl;
-        exit(1);
+        return 1;
     }
 
     ifstream src;
@@ -156,7 +156,7 @@ int main(int argc, char** argv){
 
     if(!src.good()){
         cerr << "File error: Could not open source file: " << argv[2] << endl;
-        exit(2);
+        return 2;
     }
 
     dest.open(argv[3]);
@@ -165,7 +165,7 @@ int main(int argc, char** argv){
         cerr << "File error: Could not write to destination file: "
              << argv[3] << endl;
         src.close();
-        exit(2);
+        return 2;
     }
 
     HuffmanTree h;
@@ -180,7 +180,7 @@ int main(int argc, char** argv){
             cerr << "File cannot be compressed" << endl;
             src.close();
             dest.close();
-            exit(3);
+            return 3;
         }
     }
 
@@ -196,7 +196,7 @@ int main(int argc, char** argv){
             cerr << "File was not compressed by this program" << endl;
             src.close();
             dest.close();
-            exit(3);
+            return 3;
         }
     }
 
@@ -205,7 +205,7 @@ int main(int argc, char** argv){
         cerr << "Unrecognized command line option" << endl;
         src.close();
         dest.close();
-        exit(1);
+        return 1;
     }
 
     src.close();
