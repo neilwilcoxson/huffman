@@ -66,8 +66,8 @@ protected:
     TreeNode *root,         //root node of the tree
             **array,        //sorted by numerical value (0-255)
             **refArray;     //sorted by frequency
-    int numChar,            //number of unique characters
-        id;                 //used for verification
+    int id;                 //used for verification
+    unsigned char numChar;  //number of unique characters
 public:
     HuffmanTree();
     ~HuffmanTree();
@@ -234,16 +234,19 @@ HuffmanTree::HuffmanTree(){
     this->id = 0xfeedc4c5;
     this->array = this->refArray = nullptr;
 }
+
 HuffmanTree::~HuffmanTree(){
     delete root;
     delete [] array;
     delete [] refArray;
 }
+
 bool HuffmanTree::verify(int id){
     return id == this->id;
 }
+
 bool HuffmanTree::buildTree(ifstream& f){
-    unsigned long charCount = 0, bytesRequired = 8;
+    unsigned long charCount = 0, bytesRequired = 5;
     int bits = 0;
     char c;
 
@@ -280,8 +283,8 @@ bool HuffmanTree::buildTree(ifstream& f){
             //only push characters that actually appear
             q.push(refArray[i]);
 
-            //header: 1 byte for character + 4 bytes for frequency
-            bytesRequired += 5;
+            //header: 1 byte for character
+            bytesRequired++;
 
             //data: number of bytes varies
             TreeNode* currentNode = array[i];
@@ -393,12 +396,11 @@ void HuffmanTree::decode(ifstream& in, ofstream& out){
 
 ostream& operator<<(ostream &os, const HuffmanTree& ht){
     os.write((char*)&ht.id, sizeof(int));
-    os.write((char*)&ht.numChar, sizeof(int));
+    os.write((char*)&ht.numChar, 1);
 
     for(int i = 256-ht.numChar; i < 256; i++){
         if(ht.refArray[i] && ht.refArray[i]->frequency > 0){
             os.write(&ht.refArray[i]->letter,1);
-            os.write((char*)&ht.refArray[i]->frequency, sizeof(int));
         }
     }
     return os;
@@ -406,9 +408,8 @@ ostream& operator<<(ostream &os, const HuffmanTree& ht){
 
 istream& operator>>(istream &is, HuffmanTree& ht){
     char c;
-    int f;
 
-    is.read((char*)&ht.numChar, sizeof(int));
+    is.read((char*)&ht.numChar, 1);
 
     if(!ht.refArray){
         ht.refArray = new TreeNode*[ht.numChar];
@@ -419,10 +420,8 @@ istream& operator>>(istream &is, HuffmanTree& ht){
     //read characters and frequencies and add to queue
     for(int i = 0; i < ht.numChar; i++){
         is.read(&c,1);
-        is.read((char*)&f, sizeof(int));
 
         ht.refArray[i] = new TreeNode(true, c);
-        ht.refArray[i]->frequency = f;
 
         q.push(ht.refArray[i]);
     }
