@@ -3,7 +3,7 @@
  * Assignment Title: Project 4 - Huffman Encoding
  * Due Date: 3/21/2018
  * Date Created: 3/1/2018
- * Date Last Modified: 3/8/2018
+ * Date Last Modified: 3/12/2018
  *
  * This program uses huffman encoding to compress and decompress files
  * (primarily text).  File are given as command line arguments. See help
@@ -90,7 +90,7 @@ public:
      * precondition: file is open
      * postcondition: flag representing whether compresses will work
      */
-    bool buildTree(ifstream& f);
+    bool buildTree(fstream& f);
 
     /*
      * HuffmanTree::encode
@@ -100,7 +100,7 @@ public:
      * precondition: input/output files are open, tree written to output file
      * postcondition: compressed data written to output file
      */
-    void encode(ifstream& in, ofstream& out);
+    void encode(fstream& in, fstream& out);
 
     /*
      * HuffmanTree::decode
@@ -110,7 +110,7 @@ public:
      * precondition: both files are open, input file marker at data start
      * postcondition: decompressed data written to output file
      */
-    void decode(ifstream& in, ofstream& out);
+    void decode(fstream& in, fstream& out);
 
     /*
      * operator<<
@@ -162,12 +162,10 @@ int main(int argc, char** argv){
              << "NOTE: If destination exists, it will be overwritten!" << endl;
         return 1;
     }
-
-    ifstream src;
-    ofstream dest;
+    fstream src, dest;
 
     try{
-        src.open(argv[2]);
+        src.open(argv[2], ios::in | ios::binary);
 
         if(!src.good()){
             string error = "File error: Could not open source file: ";
@@ -175,7 +173,7 @@ int main(int argc, char** argv){
             throw unsuccessful(error,2);
         }
 
-        dest.open(argv[3]);
+        dest.open(argv[3], ios::out | ios::binary);
 
         if(!dest.good()){
             string error = "File error: Could not write to destination file: ";
@@ -199,7 +197,7 @@ int main(int argc, char** argv){
         //decompress
         else if(strcmp(argv[1], "-unhuff") == 0){
             int key;
-            src.read((char *)&key, sizeof(int));
+            src.read((char*)&key, sizeof(int));
 
             if(h.verify(key)){
                 src >> h;
@@ -245,7 +243,7 @@ bool HuffmanTree::verify(int id){
     return id == this->id;
 }
 
-bool HuffmanTree::buildTree(ifstream& f){
+bool HuffmanTree::buildTree(fstream& f){
     unsigned long charCount = 0, bytesRequired = 5;
     int bits = 0;
     char c;
@@ -321,7 +319,7 @@ bool HuffmanTree::buildTree(ifstream& f){
     return bytesRequired < charCount;
 }
 
-void HuffmanTree::encode(ifstream& in, ofstream& out){
+void HuffmanTree::encode(fstream& in, fstream& out){
     char c, buffer = 0;
     int currentPattern = 0, pBits = 0, bBits = 0, extra = 1;
     TreeNode* currentNode;
@@ -372,7 +370,7 @@ void HuffmanTree::encode(ifstream& in, ofstream& out){
     }
 }
 
-void HuffmanTree::decode(ifstream& in, ofstream& out){
+void HuffmanTree::decode(fstream& in, fstream& out){
     char buffer;
     TreeNode* current = this->root;
 
