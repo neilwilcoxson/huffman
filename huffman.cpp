@@ -3,7 +3,7 @@
  * Assignment Title: Project 4 - Huffman Encoding
  * Due Date: 3/21/2018
  * Date Created: 3/1/2018
- * Date Last Modified: 3/12/2018
+ * Date Last Modified: 3/17/2018
  *
  * This program uses huffman encoding to compress and decompress files
  * (primarily text).  File are given as command line arguments. See help
@@ -417,7 +417,7 @@ istream& operator>>(istream &is, HuffmanTree& ht){
 
     queue<TreeNode*> q;
 
-    //read characters and frequencies and add to queue
+    //read characters and add to queue
     for(int i = 0; i < ht.numChar; i++){
         is.read(&c,1);
 
